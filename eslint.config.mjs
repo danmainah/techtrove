@@ -22,7 +22,8 @@ const eslintConfig = [
     rules: {
       "@typescript-eslint/no-require-imports": "error",
       "@typescript-eslint/no-unused-expressions": "off",
-      "@typescript-eslint/no-unused-vars": "warn"
+      "@typescript-eslint/no-unused-vars": "warn",
+       "@typescript-eslint/no-this-alias": "off"
     }
   },
   {
