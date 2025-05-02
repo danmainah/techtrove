@@ -13,11 +13,24 @@ const eslintConfig = [
   ...compat.extends("next/core-web-vitals", "next/typescript"),
   {
     files: ["**/*.{js,ts,tsx}"],
-    ignores: ["**/generated/**/*", "**/node_modules/**/*"],
+    ignores: [
+      "**/generated/**/*",
+      "**/node_modules/**/*",
+      "**/prisma/**/*.js",
+      "**/prisma/**/*.ts"
+    ],
     rules: {
       "@typescript-eslint/no-require-imports": "error",
       "@typescript-eslint/no-unused-expressions": "off",
       "@typescript-eslint/no-unused-vars": "warn"
+    }
+  },
+  {
+    files: ["**/generated/**/*", "**/prisma/**/*.js", "**/prisma/**/*.ts"],
+    rules: {
+      "@typescript-eslint/no-require-imports": "off",
+      "@typescript-eslint/no-unused-expressions": "off",
+      "@typescript-eslint/no-unused-vars": "off"
     }
   }
 ];
