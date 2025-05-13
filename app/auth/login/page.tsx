@@ -19,14 +19,30 @@ export default function Login() {
     const handleSignIn = async (provider: string, credentials?: { email: string; password: string }) => {
         try {
             if (!provider) throw new Error('Provider is required');
-            if (credentials && (!credentials.email || !credentials.password)) {
-                throw new Error('Email and password are required');
+    
+            const options: any = { callbackUrl: '/dashboard' };
+    
+            if (provider === 'credentials') {
+                if (!credentials?.email || !credentials?.password) {
+                    throw new Error('Email and password are required');
+                }
+    
+                options.email = credentials.email;
+                options.password = credentials.password;
             }
-            await signIn(provider, { callbackUrl: '/dashboard' });
+    
+            const res = await signIn(provider, options);
+    
+            // Optional: check for signIn error here too
+            if (res?.error) {
+                setError(res.error);
+            }
+    
         } catch (error) {
             setError(error instanceof Error ? error.message : 'Sign-in failed');
         }
     };
+    
 
     return (
         <div className="w-96 mx-auto mt-8">

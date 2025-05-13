@@ -3,7 +3,7 @@
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import Google from "next-auth/providers/google";
-import { compare } from "bcryptjs";
+import { comparePassword } from "./utils/password";
 import supabase from "./lib/supabase";
 
 interface User {
@@ -30,7 +30,7 @@ const providers = [
       if (!user) {
         throw new Error(`No user found with email ${credentials.email}, please signup first.`);
       }
-      const isValid = await compare(credentials.password, user.password_hash);
+      const isValid = await comparePassword(credentials.password, user.password_hash);
       if (!isValid){
         throw new Error("Kindly enter correct password");
       }
@@ -82,8 +82,8 @@ export default NextAuth({
     },
   },
   pages: {
-    signIn: "/auth/signin",
-    error: "/auth/signin",
+    signIn: "/auth/login",
+    error: "/auth/login",
     signOut: "/",
   },
 });
