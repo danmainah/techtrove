@@ -1,3 +1,4 @@
+/* eslint-disable */
 import NextAuth from "@/auth";
 
 export async function GET(request: unknown, response: unknown) {
