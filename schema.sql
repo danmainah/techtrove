@@ -11,11 +11,13 @@ create table users (
 -- Gadgets table
 create table gadgets (
   id uuid primary key default gen_random_uuid(),
-  title text not null,
+  title text not null unique,
   short_review text,
   image_url text,
   buy_link_1 text,
   buy_link_2 text,
+  category text, -- e.g., 'TV', 'Phones', 'Soundbars', 'Sound Systems'
+  specifications jsonb, -- Store detailed specs as structured JSON data
   created_by uuid references users(id) on delete set null,
   created_at timestamp with time zone default now()
 );
@@ -34,16 +36,23 @@ create table blog_posts (
 -- Scraped data table (temporary data before approval)
 create table scraped_data (
   id uuid primary key default gen_random_uuid(),
-  source_url text,
-  title text,
+  source_url text not null,
+  title text not null,
   short_review text,
   buy_link_1 text,
   buy_link_2 text,
-  image_url text,
+  image_urls text[],
+  category text,
+  specifications jsonb,
   status text check (status in ('pending', 'approved', 'rejected')) default 'pending',
   added_by uuid references users(id) on delete set null,
   created_at timestamp with time zone default now()
 );
+
+-- Enable RLS but allow API access
+alter table scraped_data enable row level security;
+create policy "Allow API access" on scraped_data
+  for all using (true) with check (true);
 
 -- Usage analytics table
 create table page_visits (
