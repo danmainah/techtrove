@@ -20,7 +20,7 @@ export default function Login() {
         try {
             if (!provider) throw new Error('Provider is required');
     
-            const options: any = { callbackUrl: '/dashboard' };
+            const options: { callbackUrl: string, email?: string, password?: string } = { callbackUrl: '/dashboard' };
     
             if (provider === 'credentials') {
                 if (!credentials?.email || !credentials?.password) {
@@ -95,7 +95,7 @@ export default function Login() {
 
             <div className="mt-4 text-center">
                 <Link href="/auth/signup" className="text-blue-600">
-                    Don't have an account? Sign Up
+                    Don&apos;t have an account? Sign Up
                 </Link>
             </div>
         </div>

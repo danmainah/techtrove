@@ -1,24 +1,29 @@
 "use client"
 
-import { useState } from "react";
+import {  useState } from "react";
 import { useRouter } from "next/navigation";
-import { signUp } from "../_actions";
+import { createUser } from "../_actions";
 import Link from "next/link";
 
 export default function Signup() {
     const [username, setUsername] = useState("");
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
-    const [role, setRole] = useState("user");
+    const [error, setError] = useState<string | null>(null);
     const router = useRouter();
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        setError(null);
         try {
-            const result = await signUp(email, password, username);
-            console.log(result);
-            router.push('/dashboard');
-        } catch (error) {
+            const result = await createUser({email, password, username, role: 'user'});
+            if (result.error) {
+                setError(result.error);
+            } else {
+                router.push('/dashboard');
+            }
+        } catch (error: Error | unknown) {
+            setError('An unexpected error occurred');
             console.error('Signup failed:', error);
         }
     };
@@ -26,7 +31,11 @@ export default function Signup() {
     return (
         <div className="w-96 mx-auto mt-8">
             <h1 className="text-2xl font-bold mb-4">Sign Up</h1>
-
+            {error && (
+                <div className="mb-4 p-2 bg-red-100 text-red-700 rounded">
+                    {error}
+                </div>
+            )}
             <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
                     <label className="block mb-2">Username</label>

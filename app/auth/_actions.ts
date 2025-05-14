@@ -5,6 +5,7 @@ import { hashPassword } from '../../utils/password';
 import {z} from 'zod'
 
 interface User {
+  error: string | null;
   id: string;
   email: string;
   password_hash: string;
@@ -22,28 +23,42 @@ export async function createUser(credentials: z.infer<typeof userSchema>) {
     const data = userSchema.safeParse(credentials)   
 
     if(data.success === false){
-        return data.error.cause
+        return { error: data.error.errors.map(e => e.message).join(', ') }
     }
     
-    const registedUser = await supabase.from('users').select('*').eq('email', credentials.email).single()
+    const { data: existingUser, error: selectError } = await supabase
+        .from('users')
+        .select('*')
+        .eq('email', credentials.email)
+        .maybeSingle()
 
-    if(registedUser){
-        return {data: "user already exists",status: 409}
-    } else {
-        const user = await supabase.from('users').insert({
-            data: {
-                name: credentials.username,
-                email: credentials.email,
-                password_hash: await hashPassword(credentials.password),
-                role: credentials.role || 'user',
-            },
-        })
-       
-        return {data: user,status: 201}
+    if (selectError) {
+        return { error: selectError.message }
     }
+    
+    if (existingUser) {
+        return { error: 'User with this email already exists' }
+    }
+
+    const { data: user, error: insertError } = await supabase
+        .from('users')
+        .insert({
+            name: credentials.username,
+            email: credentials.email,
+            password_hash: await hashPassword(credentials.password),
+            role: credentials.role || 'user',
+        })
+        .select()
+        .single()
+
+    if (insertError) {
+        return { error: insertError.message }
+    }
+    
+    return { data: user }
 }
 
-export async function updateUser(userId: string, data: any) {
+export async function updateUser(userId: string, data: z.infer<typeof userSchema>) {
     try {
       const user = await supabase.from('users').update({
         data
@@ -71,14 +86,4 @@ export async function updateUser(userId: string, data: any) {
    }  else {
       return {data: "No users found",status: 404}
    }
-  }
-
-  export async function signUp(email: string, password: string, name: string) {
-    const { data, error } = await supabase
-      .from('users')
-      .insert<Omit<User, 'id'>>({ email, password_hash: await hashPassword(password), name })
-      .single();
-
-    if (error) throw error;
-    return data as User;
   }
