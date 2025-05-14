@@ -4,14 +4,6 @@ import supabase from '../../lib/supabase';
 import { hashPassword } from '../../utils/password';
 import {z} from 'zod'
 
-interface User {
-  error: string | null;
-  id: string;
-  email: string;
-  password_hash: string;
-  name: string;
-}
-
 const userSchema = z.object({
     username: z.string().min(3).max(100),
     email: z.string().email(),
