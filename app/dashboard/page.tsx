@@ -1,10 +1,22 @@
 "use client"
 
 import { useState } from 'react';
+import { useSession } from 'next-auth/react';
+import { redirect } from 'next/navigation';
 import ScrapeComponent from './components/ScrapeComponent';
+import ReviewScrapped from './components/ReviewScrapped';
 
 export default function Dashboard() {
   const [activeTab, setActiveTab] = useState('scrape');
+  const { data: session, status } = useSession();
+  
+  if (status === 'unauthenticated') {
+    redirect('/auth/login');
+  }
+
+  if (status === 'loading' || !session) {
+    return <div>Loading...</div>;
+  }
 
   const tabs = [
     { id: 'scrape', label: 'Scrape Data' },
@@ -48,7 +60,7 @@ export default function Dashboard() {
             <div>
               <h2 className="text-xl font-semibold mb-4">Review Scraped Data</h2>
               {/* Will implement this component next */}
-              <p className="text-gray-500">Review and approve scraped data here</p>
+              <ReviewScrapped />
             </div>
           )}
           

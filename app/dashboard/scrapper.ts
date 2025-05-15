@@ -1,3 +1,5 @@
+"use server"
+
 import supabase, { adminSupabase } from '@/lib/supabase';
 import axios from 'axios';
 import { load } from 'cheerio';
@@ -43,7 +45,7 @@ async function uploadImageToStorage(url: string, fileName: string): Promise<stri
   }
 }
 
-export async function scrapeGsmArena(url: string, userId: string): Promise<void> {
+export async function scrapeGsmArena(url: string, userId: string): Promise<ScrapedData> {
   try {
     // Fetch the page
     const { data } = await axios.get(url, {
@@ -111,7 +113,7 @@ export async function scrapeGsmArena(url: string, userId: string): Promise<void>
         short_review: undefined,
         buy_link_1: undefined,
         buy_link_2: undefined,
-        image_urls: [uploadedImageUrls], // Wrap in array for text[] column
+        image_urls: uploadedImageUrls, // Removed wrapping in array for text[] column
         category: 'Phones',
         specifications,
         status: 'pending',
@@ -121,6 +123,7 @@ export async function scrapeGsmArena(url: string, userId: string): Promise<void>
 
     if (insertError) throw insertError;
     
+    return scrapedData;
   } catch (error) {
     console.error('Scraping failed:', error);
     throw error;

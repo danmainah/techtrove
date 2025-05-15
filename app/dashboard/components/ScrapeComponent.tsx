@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useState } from 'react';
+import { useSession } from 'next-auth/react';
+import { User }from "@/lib/interface";
 
 export default function ScrapeComponent() {
   const [url, setUrl] = useState('');
@@ -8,6 +10,8 @@ export default function ScrapeComponent() {
   const [result, setResult] = useState<any>(null);
   const [error, setError] = useState('');
 
+  const { data: session, status } = useSession()
+  const userId = status === "authenticated" ? (session?.user as User)?.id : null;
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!url) return;
@@ -25,7 +29,7 @@ export default function ScrapeComponent() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ url }),
+        body: JSON.stringify({ url, user: userId }),
       });
       
       if (!response.ok) {

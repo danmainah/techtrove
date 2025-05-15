@@ -1,9 +1,9 @@
-﻿import { NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { scrapeGsmArena } from '@/app/dashboard/scrapper';
 
 export async function POST(request: Request) {
   try {
-    const { url } = await request.json();
+    const { url, user } = await request.json();
     
     if (!url || typeof url !== 'string') {
       return NextResponse.json(
@@ -20,10 +20,11 @@ export async function POST(request: Request) {
       );
     }
     
-    const result = await scrapeGsmArena(url, 'api-user');
+    const result = await scrapeGsmArena(url, user);
     return NextResponse.json(result);
     
   } catch (error) {
+    console.error('Scraping error:', error);
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Scraping failed' },
       { status: 500 }
