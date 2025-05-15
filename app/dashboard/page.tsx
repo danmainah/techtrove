@@ -5,6 +5,8 @@ import { useSession } from 'next-auth/react';
 import { redirect } from 'next/navigation';
 import ScrapeComponent from './components/ScrapeComponent';
 import ReviewScrapped from './components/ReviewScrapped';
+import ManageGadgets from './components/ManageGadgets';
+import ManageUsers from './components/ManageUsers';
 
 export default function Dashboard() {
   const [activeTab, setActiveTab] = useState('scrape');
@@ -68,7 +70,7 @@ export default function Dashboard() {
             <div>
               <h2 className="text-xl font-semibold mb-4">Manage Gadgets</h2>
               {/* Will implement this component next */}
-              <p className="text-gray-500">View and manage existing gadgets here</p>
+              <ManageGadgets />
             </div>
           )}
           
@@ -76,7 +78,7 @@ export default function Dashboard() {
             <div>
               <h2 className="text-xl font-semibold mb-4">Manage Users</h2>
               {/* Will implement this component next */}
-              <p className="text-gray-500">View and manage user accounts here</p>
+              <ManageUsers />
             </div>
           )}
         </div>

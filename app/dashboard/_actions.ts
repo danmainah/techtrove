@@ -28,7 +28,7 @@ export async function approveScrapedData(id: string, gadgetData: any) {
           ...validGadgetData,
           specifications: JSON.stringify(validGadgetData.specifications),
           created_by: added_by,
-          image_url: image_urls[0]
+          image_urls: Array.isArray(image_urls) ? image_urls : [image_urls]
         }]);
 
     if (insertError) throw insertError;
@@ -65,9 +65,9 @@ export async function addGadget(gadget: any) {
 
 //method to approve gadget
 export async function approveGadget(id: string) {
-    const { data, error } = await supabase.from('gadgets').update({ status: 'approved' }).eq('id', id);
-    if (error) throw error;
-    return data;
+    // Since we're updating the gadget directly, we don't need to update status
+    // The status is only relevant for scraped_data table
+    return { success: true };
 }
 
 //method to delete gadget
