@@ -7,6 +7,7 @@ import ScrapeComponent from './components/ScrapeComponent';
 import ReviewScrapped from './components/ReviewScrapped';
 import ManageGadgets from './components/ManageGadgets';
 import ManageUsers from './components/ManageUsers';
+import ManageBlog from './components/ManageBlog';
 
 export default function Dashboard() {
   const [activeTab, setActiveTab] = useState('scrape');
@@ -24,7 +25,8 @@ export default function Dashboard() {
     { id: 'scrape', label: 'Scrape Data' },
     { id: 'review', label: 'Review Scraped Data' },
     { id: 'gadgets', label: 'Manage Gadgets' },
-    { id: 'users', label: 'Manage Users' }
+    { id: 'users', label: 'Manage Users' },
+    { id: 'blog', label: 'Manage Blog' }
   ];
 
   return (
@@ -79,6 +81,13 @@ export default function Dashboard() {
               <h2 className="text-xl font-semibold mb-4">Manage Users</h2>
               {/* Will implement this component next */}
               <ManageUsers />
+            </div>
+          )}
+            {activeTab === 'blog' && (
+            <div>
+              <h2 className="text-xl font-semibold mb-4">Manage Blog</h2>
+              {/* Will implement this component next */}
+              <ManageBlog />
             </div>
           )}
         </div>
