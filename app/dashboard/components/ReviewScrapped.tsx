@@ -9,13 +9,48 @@ type Gadget = {
   created_at: string;
   title: string;
   category: string;
-  specifications: Record<string, string>;
   image_urls: string[];
   status: 'pending' | 'approved';
   source_url: string;
   short_review?: string;
   buy_link_1?: string;
   buy_link_2?: string;
+  // Specification fields (from schema.sql)
+  network_technology?: string;
+  launch_announced?: string;
+  launch_status?: string;
+  body_dimensions?: string;
+  body_weight?: string;
+  body_build?: string;
+  body_sim?: string;
+  display_type?: string;
+  display_size?: string;
+  display_resolution?: string;
+  display_protection?: string;
+  platform_os?: string;
+  platform_chipset?: string;
+  platform_cpu?: string;
+  platform_gpu?: string;
+  memory_internal?: string;
+  main_camera?: string;
+  main_camera_features?: string;
+  main_camera_video?: string;
+  selfie_camera?: string;
+  selfie_camera_video?: string;
+  sound_loudspeaker?: string;
+  sound_3_5mm_jack?: string;
+  comms_wlan?: string;
+  comms_bluetooth?: string;
+  comms_positioning?: string;
+  comms_nfc?: string;
+  comms_radio?: string;
+  comms_usb?: string;
+  features_sensors?: string;
+  battery_type?: string;
+  battery_charging?: string;
+  misc_colors?: string;
+  misc_models?: string;
+  misc_price?: string;
 };
 
 export default function ReviewScrapped() {
@@ -28,8 +63,23 @@ export default function ReviewScrapped() {
     const fetched = async () => {
       try {
         const gadgets = await fetchScrapedData();
-        setGadgets(gadgets);
-        setEditableGadgets(gadgets);
+        // Update pending gadgets with latest data if similar
+        const updatedGadgets = gadgets.map(gadget => {
+          if (gadget.status === 'pending') {
+            // Find latest data for similar gadget (same title, case-insensitive)
+            const latest = gadgets.find(g =>
+              g.id !== gadget.id &&
+              g.title.trim().toLowerCase() === gadget.title.trim().toLowerCase()
+            );
+            if (latest) {
+              // Merge latest data into pending gadget (keep id & status)
+              return { ...latest, id: gadget.id, status: 'pending' };
+            }
+          }
+          return gadget;
+        });
+        setGadgets(updatedGadgets);
+        setEditableGadgets(updatedGadgets);
       } catch (error) {
         console.error('Error fetching gadgets: ' + (error instanceof Error ? error.message : String(error)));
       } finally {
@@ -41,7 +91,17 @@ export default function ReviewScrapped() {
 
   const handleApprove = async (id: string) => {
     try {
-      await approveScrapedData(id, editableGadgets.find(g => g.id === id));
+      // Find the gadget to approve
+      const gadgetToApprove = editableGadgets.find(g => g.id === id);
+      
+      if (!gadgetToApprove) {
+        throw new Error('Gadget not found');
+      }
+      
+      // Pass the gadget with flat fields to the approve function
+      await approveScrapedData(id, gadgetToApprove);
+      
+      // Update local state
       setGadgets(gadgets.map(g => g.id === id ? {...g, status: 'approved'} : g));
       setEditableGadgets(editableGadgets.map(g => g.id === id ? {...g, status: 'approved'} : g));
     } catch (error) {
@@ -49,27 +109,8 @@ export default function ReviewScrapped() {
     }
   };
 
-  const updateSpecKey = (id: string, oldKey: string, newKey: string) => {
-    setEditableGadgets(editableGadgets.map(g => 
-      g.id === id ? {
-        ...g,
-        specifications: Object.fromEntries(
-          Object.entries(g.specifications).map(([k, v]) => 
-            k === oldKey ? [newKey, v] : [k, v]
-          )
-        )
-      } : g
-    ));
-  };
-
-  const updateSpecValue = (id: string, key: string, newValue: string) => {
-    setEditableGadgets(editableGadgets.map(g => 
-      g.id === id ? {
-        ...g,
-        specifications: { ...g.specifications, [key]: newValue }
-      } : g
-    ));
-  };
+  // No longer need updateSpecKey and updateSpecValue since we're using flat fields
+  // All updates are handled by the updateField function
 
   const updateField = (id: string, field: keyof Gadget, value: string) => {
     setEditableGadgets(editableGadgets.map(g =>
@@ -83,7 +124,7 @@ export default function ReviewScrapped() {
     <div className="space-y-4">
       <h3 className="text-lg font-medium">Pending Reviews ({gadgets.filter(g => g.status === 'pending').length})</h3>
       
-      {editableGadgets.map(gadget => (
+      {editableGadgets.filter(g => g.status === 'pending').map(gadget => (
         <div key={gadget.id} className="border p-4 rounded-lg">
           <div className="flex gap-4 mb-4">
             {gadget.image_urls.map((url, i) => (
@@ -153,23 +194,51 @@ export default function ReviewScrapped() {
             </div>
           </div>
           <div className="grid grid-cols-2 gap-2 text-sm">
-            {Object.entries(gadget.specifications).map(([key, value]) => (
-              <div key={key} className="flex gap-2">
+            {/* Render each specification field as a direct property */}
+            {[
+              ['network_technology', 'Network Technology'],
+              ['launch_announced', 'Launch Announced'],
+              ['launch_status', 'Launch Status'],
+              ['body_dimensions', 'Body Dimensions'],
+              ['body_weight', 'Body Weight'],
+              ['body_build', 'Body Build'],
+              ['body_sim', 'Body SIM'],
+              ['display_type', 'Display Type'],
+              ['display_size', 'Display Size'],
+              ['display_resolution', 'Display Resolution'],
+              ['display_protection', 'Display Protection'],
+              ['platform_os', 'Platform OS'],
+              ['platform_chipset', 'Platform Chipset'],
+              ['platform_cpu', 'Platform CPU'],
+              ['platform_gpu', 'Platform GPU'],
+              ['memory_internal', 'Memory Internal'],
+              ['main_camera', 'Main Camera'],
+              ['main_camera_features', 'Main Camera Features'],
+              ['main_camera_video', 'Main Camera Video'],
+              ['selfie_camera', 'Selfie Camera'],
+              ['selfie_camera_video', 'Selfie Camera Video'],
+              ['sound_loudspeaker', 'Sound Loudspeaker'],
+              ['sound_3_5mm_jack', '3.5mm Jack'],
+              ['comms_wlan', 'WLAN'],
+              ['comms_bluetooth', 'Bluetooth'],
+              ['comms_positioning', 'Positioning'],
+              ['comms_nfc', 'NFC'],
+              ['comms_radio', 'Radio'],
+              ['comms_usb', 'USB'],
+              ['features_sensors', 'Sensors'],
+              ['battery_type', 'Battery Type'],
+              ['battery_charging', 'Battery Charging'],
+              ['misc_colors', 'Colors'],
+              ['misc_models', 'Models'],
+              ['misc_price', 'Price'],
+            ].map(([field, label]) => (
+              <div key={field as string} className="flex gap-2">
                 <div className="w-full">
-                  <label htmlFor={`spec-key-${key}`} className="block text-xs text-gray-500 mb-1">Spec Key</label>
+                  <label htmlFor={`${field}-${gadget.id}`} className="block text-xs text-gray-500 mb-1">{label}</label>
                   <input
-                    id={`spec-key-${key}`}
-                    value={key}
-                    onChange={(e) => updateSpecKey(gadget.id, key, e.target.value)}
-                    className="border p-1 rounded w-full"
-                  />
-                </div>
-                <div className="w-full">
-                  <label htmlFor={`spec-value-${key}`} className="block text-xs text-gray-500 mb-1">Spec Value</label>
-                  <input
-                    id={`spec-value-${key}`}
-                    value={value}
-                    onChange={(e) => updateSpecValue(gadget.id, key, e.target.value)}
+                    id={`${field}-${gadget.id}`}
+                    value={gadget[field as keyof Gadget] || ''}
+                    onChange={e => updateField(gadget.id, field as keyof Gadget, e.target.value)}
                     className="border p-1 rounded w-full"
                   />
                 </div>
