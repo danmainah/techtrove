@@ -1,6 +1,7 @@
 "use server"
 
 import supabase from '@/lib/supabase';
+import { Gadget } from '@/types';
 
 //method to fetch all scraped data
 export async function fetchScrapedData() {
@@ -11,7 +12,7 @@ export async function fetchScrapedData() {
 }
 
 //method to approve scraped data
-export async function approveScrapedData(id: string, gadgetData: any) {
+export async function approveScrapedData(id: string, gadgetData: Record<string, unknown>) {
     // First get the user ID for this scraped data
     const { data: scrapedItem, error: fetchError } = await supabase
         .from('scraped_data')
@@ -23,15 +24,8 @@ export async function approveScrapedData(id: string, gadgetData: any) {
     
     // Extract only the fields that exist in the gadgets table according to schema.sql
     const {
-        // Fields to exclude (not in gadgets table)
-        id: recordId, // Rename to avoid duplicate identifier
-        created_at,
         added_by,
-        created_by,
-        source_url, // Not in gadgets table
-        image_urls, // Convert to image_url
-        status,
-        specifications,
+        image_urls,
         
         // Fields to include (match gadgets table schema)
         title,
@@ -170,13 +164,9 @@ export async function fetchGadgetById(id: string) {
 }
 
 //method to add new gadget
-export async function addGadget(gadget: any) {
+export async function addGadget(gadget: Record<string, unknown>) {
     // Extract fields to ensure they match the schema
-    const {
-        specifications, // Remove if present (legacy)
-        image_urls, // Handle array to single image_url
-        ...validGadgetData
-    } = gadget;
+    const { image_urls, ...validGadgetData } = gadget;
     
     // Insert with correct field structure
     const { data, error } = await supabase.from('gadgets').insert([{
@@ -190,12 +180,6 @@ export async function addGadget(gadget: any) {
     return data;
 }
 
-//method to approve gadget
-export async function approveGadget(id: string) {
-    // Since we're updating the gadget directly, we don't need to update status
-    // The status is only relevant for scraped_data table
-    return { success: true };
-}
 
 //method to delete gadget
 export async function deleteGadget(id: string) {
@@ -230,4 +214,259 @@ export async function fetchRelatedGadgets(category: string) {
     const { data, error } = await supabase.from('gadgets').select('*').eq('category', category).limit(4);
     if (error) throw error;
     return data;
+}
+
+//method to update gadget
+export async function updateGadget(id: string, gadgetData: Record<string, unknown>) {
+    // Extract only the fields that exist in the gadgets table
+    const {
+        // Fields to include (match gadgets table schema)
+        title,
+        short_review,
+        buy_link_1,
+        buy_link_2,
+        category,
+        network_technology,
+        launch_announced,
+        launch_status,
+        body_dimensions,
+        body_weight,
+        body_build,
+        body_sim,
+        display_type,
+        display_size,
+        display_resolution,
+        display_protection,
+        platform_os,
+        platform_chipset,
+        platform_cpu,
+        platform_gpu,
+        memory_internal,
+        main_camera,
+        main_camera_features,
+        main_camera_video,
+        selfie_camera,
+        selfie_camera_video,
+        sound_loudspeaker,
+        sound_3_5mm_jack,
+        comms_wlan,
+        comms_bluetooth,
+        comms_positioning,
+        comms_nfc,
+        comms_radio,
+        comms_usb,
+        features_sensors,
+        battery_type,
+        battery_charging,
+        misc_colors,
+        misc_models,
+        misc_price,
+        image_urls
+    } = gadgetData;
+
+    // Update gadget with all fields
+    const { data, error } = await supabase
+        .from('gadgets')
+        .update({
+            title,
+            short_review,
+            buy_link_1,
+            buy_link_2,
+            category,
+            network_technology,
+            launch_announced,
+            launch_status,
+            body_dimensions,
+            body_weight,
+            body_build,
+            body_sim,
+            display_type,
+            display_size,
+            display_resolution,
+            display_protection,
+            platform_os,
+            platform_chipset,
+            platform_cpu,
+            platform_gpu,
+            memory_internal,
+            main_camera,
+            main_camera_features,
+            main_camera_video,
+            selfie_camera,
+            selfie_camera_video,
+            sound_loudspeaker,
+            sound_3_5mm_jack,
+            comms_wlan,
+            comms_bluetooth,
+            comms_positioning,
+            comms_nfc,
+            comms_radio,
+            comms_usb,
+            features_sensors,
+            battery_type,
+            battery_charging,
+            misc_colors,
+            misc_models,
+            misc_price,
+            image_url: Array.isArray(image_urls) && image_urls.length > 0 ? image_urls[0] : (gadgetData.image_url || null)
+        })
+        .eq('id', id);
+
+    if (error) throw error;
+    return data;
+}
+
+// Method to track gadget views
+export async function trackGadgetView(gadget_id: string, view_type: 'product' | 'category' | 'home'): Promise<{ success: boolean; data?: unknown; error?: string }> {
+  if (!gadget_id) {
+    console.error('Cannot track view: gadget_id is missing');
+    return { success: false, error: 'gadget_id is required' };
+  }
+
+  try {
+    console.log(`Tracking view for gadget: ${gadget_id}, type: ${view_type}`);
+    
+    // First check if there's an existing record for this gadget and view type
+    const { data: existingViews, error: queryError } = await supabase
+      .from('gadget_views')
+      .select('id, count')
+      .eq('gadget_id', gadget_id)
+      .eq('view_type', view_type)
+      .maybeSingle();
+    
+    if (queryError) {
+      console.error('Error checking existing views:', queryError.message);
+      return { success: false, error: queryError.message };
+    }
+    
+    let result;
+    
+    if (existingViews) {
+      // Update the existing record by incrementing the count
+      console.log('Updating existing view record, incrementing count');
+      const { data, error } = await supabase
+        .from('gadget_views')
+        .update({ 
+          count: (existingViews.count || 1) + 1,
+          viewed_at: new Date().toISOString() // Update the timestamp to the latest view
+        })
+        .eq('id', existingViews.id)
+        .select();
+      
+      if (error) {
+        console.error('Error updating view count:', error.message, error.details);
+        return { success: false, error: error.message };
+      }
+      
+      result = data;
+    } else {
+      // Insert a new record with count = 1
+      console.log('Creating new view record with count = 1');
+      const { data, error } = await supabase
+        .from('gadget_views')
+        .insert({
+          gadget_id,
+          view_type,
+          viewed_at: new Date().toISOString(),
+          count: 1
+        })
+        .select();
+      
+      if (error) {
+        console.error('Error creating new view record:', error.message, error.details);
+        return { success: false, error: error.message };
+      }
+      
+      result = data;
+    }
+    
+    console.log('View tracked successfully:', result);
+    return { success: true, data: result };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error('Exception in trackGadgetView:', errorMessage);
+    return { success: false, error: errorMessage };
+  }
+}
+
+// Local type definition for Gadget
+type LocalGadget = {
+  id: string;
+  title: string;
+  description?: string;
+  price?: number;
+  misc_price?: string;
+  image_urls?: string[];
+  category?: string;
+  brand?: string;
+  [key: string]: unknown; // For other properties
+};
+
+type LocalGadgetWithViewCount = LocalGadget & {
+  view_count: number;
+};
+
+// Get most viewed gadgets
+export async function getMostViewedGadgets(limit = 5): Promise<LocalGadgetWithViewCount[]> {
+  try {
+    // Get all gadget views
+    const { data: allViews, error: viewsError } = await supabase
+      .from('gadget_views')
+      .select('gadget_id, count')
+      .eq('view_type', 'product')
+      .order('count', { ascending: false })
+      .limit(limit);
+    
+    if (viewsError) {
+      console.error('Error fetching gadget views:', viewsError);
+      return [];
+    }
+    
+    if (!allViews || allViews.length === 0) {
+      return [];
+    }
+    
+    // Create a map of gadget IDs to their view counts
+    const viewCountMap: Record<string, number> = {};
+    const gadgetIds = allViews.map((view) => {
+      if (view && view.gadget_id) {
+        viewCountMap[view.gadget_id] = view.count || 0;
+        return view.gadget_id;
+      }
+      return '';
+    }).filter(Boolean);
+    
+    if (gadgetIds.length === 0) {
+      return [];
+    }
+    
+    // Fetch the gadgets by ID
+    const { data: gadgetsData, error: gadgetsError } = await supabase
+      .from('gadgets')
+      .select('*')
+      .in('id', gadgetIds);
+      
+    if (gadgetsError || !gadgetsData) {
+      console.error('Error fetching gadgets by IDs:', gadgetsError);
+      return [];
+    }
+    
+    // Sort gadgets in the same order as the view counts
+    return gadgetIds
+      .map((id: string) => {
+        const gadget = gadgetsData.find((g: Gadget) => g.id === id);
+        if (gadget) {
+          // Add the view count to the gadget object
+          return {
+            ...gadget,
+            view_count: viewCountMap[id] // Add the view count
+          } as LocalGadgetWithViewCount;
+        }
+        return null;
+      })
+      .filter(Boolean) as LocalGadgetWithViewCount[];
+  } catch (error) {
+    console.error('Unexpected error in getMostViewedGadgets:', error);
+    return [];
+  }
 }

@@ -1,14 +1,18 @@
 "use client"
 
 import { useState, useEffect } from 'react';
-import { fetchGadgets, deleteGadget, approveGadget } from '@/app/dashboard/_actions';
+import { fetchGadgets, deleteGadget, updateGadget } from '@/app/dashboard/_actions';
 import Image from 'next/image';
+import { Gadget } from '@/types';
 
 export default function ManageGadgets() {
-  const [gadgets, setGadgets] = useState<any[]>([]);
+  const [gadgets, setGadgets] = useState<Gadget[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedGadget, setSelectedGadget] = useState<any>(null);
+  const [selectedGadget, setSelectedGadget] = useState<Gadget | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [successMessage, setSuccessMessage] = useState('');
 
   useEffect(() => {
     fetchGadgets().then(data => {
@@ -31,31 +35,107 @@ export default function ManageGadgets() {
     }
   };
 
-  const handleEdit = (gadget: any) => {
+  const handleEdit = (gadget: Gadget) => {
     setSelectedGadget({ ...gadget });
     setIsEditModalOpen(true);
   };
 
-  const handleEditSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const validateForm = () => {
+    const newErrors: Record<string, string> = {};
+    
+    if (!selectedGadget?.title?.trim()) {
+      newErrors.title = 'Title is required';
+    }
+    
+    if (selectedGadget?.price && isNaN(Number(selectedGadget.price))) {
+      newErrors.price = 'Must be a valid number';
+    }
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const validateImageUrl = (url: string) => {
     try {
-      await approveGadget(selectedGadget.id);
-      // Update the gadget in the list
-      setGadgets(prev => 
-        prev.map(g => g.id === selectedGadget.id ? selectedGadget : g)
-      );
-      setIsEditModalOpen(false);
-    } catch (error) {
-      console.error('Error updating gadget:', error);
+      new URL(url);
+      return true;
+    } catch {
+      return false;
     }
   };
 
-  const handleEditChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setSelectedGadget((prev: any) => ({
+  const handleImageUrlsChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const { value } = e.target;
+    const urls = value.split('\n').filter(url => url.trim());
+    
+    const newErrors = {...errors};
+    urls.forEach((url, index) => {
+      if (!validateImageUrl(url)) {
+        newErrors[`image_url_${index}`] = 'Please enter a valid URL';
+      }
+    });
+    
+    setErrors(newErrors);
+    setSelectedGadget((prev: Gadget | null) => prev ? ({
       ...prev,
-      [name]: name === 'price' ? parseFloat(value) : value
-    }));
+      image_urls: urls
+    }) : null);
+  };
+
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!validateForm()) return;
+    
+    setIsSaving(true);
+    try {
+      if (selectedGadget) {
+        await updateGadget(selectedGadget.id, selectedGadget);
+        setGadgets(prev => 
+          prev.map(g => g.id === selectedGadget.id ? selectedGadget : g)
+        );
+      }
+      setSuccessMessage('Gadget updated successfully!');
+      setTimeout(() => setSuccessMessage(''), 3000);
+      setIsEditModalOpen(false);
+    } catch (error) {
+      console.error('Error updating gadget:', error);
+      setErrors({
+        ...errors,
+        form: 'Failed to update gadget. Please try again.'
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleFieldChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setSelectedGadget((prev: Gadget | null) => {
+      if (!prev) return null;
+      
+      // Handle price specifically to ensure it's a number or empty string
+      if (name === 'price') {
+        return {
+          ...prev,
+          [name]: value === '' ? '' : parseFloat(value) || 0
+        };
+      }
+      
+      return {
+        ...prev,
+        [name]: value
+      };
+    });
+    
+    // Clear error when field is edited
+    if (errors[name]) {
+      setErrors(prev => {
+        const newErrors = {...prev};
+        delete newErrors[name];
+        return newErrors;
+      });
+    }
   };
 
   if (loading) {
@@ -73,7 +153,7 @@ export default function ManageGadgets() {
               {gadget.image_urls && gadget.image_urls[0] && (
                 <Image
                   src={gadget.image_urls[0]}
-                  alt={gadget.name}
+                  alt={gadget.title}
                   width={300}
                   height={200}
                   className="object-cover rounded-lg w-full h-48"
@@ -126,9 +206,10 @@ export default function ManageGadgets() {
                       type="text"
                       name="title"
                       value={selectedGadget?.title || ''}
-                      onChange={handleEditChange}
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
+                      onChange={handleFieldChange}
+                      className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors ${errors.title ? 'border-red-500' : ''}`}
                     />
+                    {errors.title && <p className="text-red-500 text-sm">{errors.title}</p>}
                   </div>
 
                   <div>
@@ -136,7 +217,7 @@ export default function ManageGadgets() {
                     <textarea
                       name="short_review"
                       value={selectedGadget?.short_review || ''}
-                      onChange={handleEditChange}
+                      onChange={handleFieldChange}
                       rows={3}
                       className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
                     />
@@ -149,7 +230,7 @@ export default function ManageGadgets() {
                         type="text"
                         name="category"
                         value={selectedGadget?.category || ''}
-                        onChange={handleEditChange}
+                        onChange={handleFieldChange}
                         className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
                       />
                     </div>
@@ -158,10 +239,11 @@ export default function ManageGadgets() {
                       <input
                         type="text"
                         name="price"
-                        value={selectedGadget?.price || ''}
-                        onChange={handleEditChange}
-                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
+                        value={selectedGadget?.price !== undefined && selectedGadget.price !== null ? String(selectedGadget.price) : ''}
+                        onChange={handleFieldChange}
+                        className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors ${errors.price ? 'border-red-500' : ''}`}
                       />
+                      {errors.price && <p className="text-red-500 text-sm">{errors.price}</p>}
                     </div>
                   </div>
 
@@ -172,7 +254,7 @@ export default function ManageGadgets() {
                         type="text"
                         name="buy_link_1"
                         value={selectedGadget?.buy_link_1 || ''}
-                        onChange={handleEditChange}
+                        onChange={handleFieldChange}
                         className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
                       />
                     </div>
@@ -182,7 +264,7 @@ export default function ManageGadgets() {
                         type="text"
                         name="buy_link_2"
                         value={selectedGadget?.buy_link_2 || ''}
-                        onChange={handleEditChange}
+                        onChange={handleFieldChange}
                         className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
                       />
                     </div>
@@ -195,7 +277,7 @@ export default function ManageGadgets() {
                         type="text"
                         name="network_technology"
                         value={selectedGadget?.network_technology || ''}
-                        onChange={handleEditChange}
+                        onChange={handleFieldChange}
                         className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
                       />
                     </div>
@@ -205,7 +287,7 @@ export default function ManageGadgets() {
                         type="text"
                         name="launch_announced"
                         value={selectedGadget?.launch_announced || ''}
-                        onChange={handleEditChange}
+                        onChange={handleFieldChange}
                         className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
                       />
                     </div>
@@ -215,7 +297,7 @@ export default function ManageGadgets() {
                         type="text"
                         name="body_dimensions"
                         value={selectedGadget?.body_dimensions || ''}
-                        onChange={handleEditChange}
+                        onChange={handleFieldChange}
                         className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
                       />
                     </div>
@@ -225,7 +307,7 @@ export default function ManageGadgets() {
                         type="text"
                         name="display_type"
                         value={selectedGadget?.display_type || ''}
-                        onChange={handleEditChange}
+                        onChange={handleFieldChange}
                         className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
                       />
                     </div>
@@ -235,7 +317,7 @@ export default function ManageGadgets() {
                         type="text"
                         name="platform_os"
                         value={selectedGadget?.platform_os || ''}
-                        onChange={handleEditChange}
+                        onChange={handleFieldChange}
                         className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
                       />
                     </div>
@@ -245,7 +327,7 @@ export default function ManageGadgets() {
                         type="text"
                         name="memory_internal"
                         value={selectedGadget?.memory_internal || ''}
-                        onChange={handleEditChange}
+                        onChange={handleFieldChange}
                         className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
                       />
                     </div>
@@ -255,7 +337,7 @@ export default function ManageGadgets() {
                         type="text"
                         name="main_camera"
                         value={selectedGadget?.main_camera || ''}
-                        onChange={handleEditChange}
+                        onChange={handleFieldChange}
                         className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
                       />
                     </div>
@@ -265,7 +347,7 @@ export default function ManageGadgets() {
                         type="text"
                         name="main_camera_features"
                         value={selectedGadget?.main_camera_features || ''}
-                        onChange={handleEditChange}
+                        onChange={handleFieldChange}
                         className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
                       />
                     </div>
@@ -275,7 +357,7 @@ export default function ManageGadgets() {
                         type="text"
                         name="selfie_camera"
                         value={selectedGadget?.selfie_camera || ''}
-                        onChange={handleEditChange}
+                        onChange={handleFieldChange}
                         className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
                       />
                     </div>
@@ -285,7 +367,7 @@ export default function ManageGadgets() {
                         type="text"
                         name="sound_loudspeaker"
                         value={selectedGadget?.sound_loudspeaker || ''}
-                        onChange={handleEditChange}
+                        onChange={handleFieldChange}
                         className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
                       />
                     </div>
@@ -295,7 +377,7 @@ export default function ManageGadgets() {
                         type="text"
                         name="comms_nfc"
                         value={selectedGadget?.comms_nfc || ''}
-                        onChange={handleEditChange}
+                        onChange={handleFieldChange}
                         className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
                       />
                     </div>
@@ -305,7 +387,7 @@ export default function ManageGadgets() {
                         type="text"
                         name="battery_charging"
                         value={selectedGadget?.battery_charging || ''}
-                        onChange={handleEditChange}
+                        onChange={handleFieldChange}
                         className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
                       />
                     </div>
@@ -315,25 +397,20 @@ export default function ManageGadgets() {
                         type="text"
                         name="misc_models"
                         value={selectedGadget?.misc_models || ''}
-                        onChange={handleEditChange}
+                        onChange={handleFieldChange}
                         className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700">Image URLs (comma separated)</label>
+                      <label className="block text-sm font-medium text-gray-700">Image URLs (one per line)</label>
                       <textarea
                         name="image_urls"
-                        value={selectedGadget?.image_urls?.join(', ') || ''}
-                        onChange={(e) => {
-                          const urls = e.target.value.split(',').map(url => url.trim()).filter(url => url);
-                          setSelectedGadget((prev: any) => ({
-                            ...prev,
-                            image_urls: urls
-                          }));
-                        }}
-                        rows={2}
+                        value={selectedGadget?.image_urls?.join('\n') || ''}
+                        onChange={handleImageUrlsChange}
+                        rows={3}
                         className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
                       />
+                      {errors.image_url_0 && <p className="text-red-500 text-sm">{errors.image_url_0}</p>}
                     </div>
                   </div>
 
@@ -347,7 +424,7 @@ export default function ManageGadgets() {
                             type="text"
                             name="comms_wlan"
                             value={selectedGadget?.comms_wlan || ''}
-                            onChange={handleEditChange}
+                            onChange={handleFieldChange}
                             className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
                           />
                         </div>
@@ -357,7 +434,7 @@ export default function ManageGadgets() {
                             type="text"
                             name="comms_bluetooth"
                             value={selectedGadget?.comms_bluetooth || ''}
-                            onChange={handleEditChange}
+                            onChange={handleFieldChange}
                             className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
                           />
                         </div>
@@ -367,7 +444,7 @@ export default function ManageGadgets() {
                             type="text"
                             name="comms_positioning"
                             value={selectedGadget?.comms_positioning || ''}
-                            onChange={handleEditChange}
+                            onChange={handleFieldChange}
                             className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
                           />
                         </div>
@@ -377,7 +454,7 @@ export default function ManageGadgets() {
                             type="text"
                             name="comms_radio"
                             value={selectedGadget?.comms_radio || ''}
-                            onChange={handleEditChange}
+                            onChange={handleFieldChange}
                             className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
                           />
                         </div>
@@ -389,7 +466,7 @@ export default function ManageGadgets() {
                             type="text"
                             name="comms_usb"
                             value={selectedGadget?.comms_usb || ''}
-                            onChange={handleEditChange}
+                            onChange={handleFieldChange}
                             className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
                           />
                         </div>
@@ -399,7 +476,7 @@ export default function ManageGadgets() {
                             type="text"
                             name="features_sensors"
                             value={selectedGadget?.features_sensors || ''}
-                            onChange={handleEditChange}
+                            onChange={handleFieldChange}
                             className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
                           />
                         </div>
@@ -409,7 +486,7 @@ export default function ManageGadgets() {
                             type="text"
                             name="misc_colors"
                             value={selectedGadget?.misc_colors || ''}
-                            onChange={handleEditChange}
+                            onChange={handleFieldChange}
                             className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
                           />
                         </div>
@@ -431,12 +508,23 @@ export default function ManageGadgets() {
                   </button>
                   <button
                     type="submit"
-                    className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
+                    disabled={isSaving}
+                    className={`px-4 py-2 ${isSaving ? 'bg-gray-300 text-gray-500' : 'bg-blue-500 text-white'} rounded hover:bg-blue-600 transition-colors`}
                   >
-                    Save Changes
+                    {isSaving ? 'Saving...' : 'Save Changes'}
                   </button>
                 </div>
               </form>
+              {errors.form && (
+                <div className="p-4 bg-red-50 text-red-600 rounded-md mb-4">
+                  {errors.form}
+                </div>
+              )}
+              {successMessage && (
+                <div className="p-4 bg-green-50 text-green-600 rounded-md mb-4">
+                  {successMessage}
+                </div>
+              )}
             </div>
           </div>
         </div>

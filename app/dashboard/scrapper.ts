@@ -265,16 +265,6 @@ export async function scrapeGsmArena(url: string, userId: string): Promise<Scrap
       };
     }
 
-    // Prepare data for Supabase
-    const scrapedData: ScrapedData = {
-      source_url: url,
-      title,
-      image_urls: uploadedImageUrls,
-      category: 'Phones',
-      status: 'pending',
-      ...specifications
-    };
-
     // Save to database
     console.debug('[Scraper] Saving to database');
     const { data: insertedData, error: insertError } = await adminSupabase

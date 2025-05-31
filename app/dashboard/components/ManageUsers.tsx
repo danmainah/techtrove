@@ -3,11 +3,12 @@
 import { useState, useEffect } from 'react';
 import { deleteUser, fetchUsers, editUserRole } from '@/app/dashboard/_actions';
 import supabase from '@/lib/supabase';
+import { User } from '@/types';
 
 export default function ManageUsers() {
-  const [users, setUsers] = useState<any[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedUser, setSelectedUser] = useState<any>(null);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [isReassignModalOpen, setIsReassignModalOpen] = useState(false);
   const [targetUserId, setTargetUserId] = useState('');
 
@@ -43,9 +44,20 @@ export default function ManageUsers() {
       }
 
       if (gadgets?.length || scrapedData?.length) {
-        setSelectedUser({ id: userId, gadgets, scrapedData });
-        setIsReassignModalOpen(true);
-        return;
+        // Find the user to get their email and name
+        const userToReassign = users.find(user => user.id === userId);
+        if (userToReassign) {
+          setSelectedUser({
+            id: userId,
+            email: userToReassign.email,
+            name: userToReassign.name,
+            role: userToReassign.role,
+            gadgets,
+            scrapedData
+          });
+          setIsReassignModalOpen(true);
+          return;
+        }
       }
 
       // If no data to reassign, proceed with deletion
@@ -65,7 +77,7 @@ export default function ManageUsers() {
         await supabase
           .from('gadgets')
           .update({ created_by: targetUserId })
-          .in('id', selectedUser.gadgets.map((g: any) => g.id));
+          .in('id', selectedUser.gadgets.map((g) => g.id));
       }
 
       // Reassign scraped data
@@ -73,7 +85,7 @@ export default function ManageUsers() {
         await supabase
           .from('scraped_data')
           .update({ added_by: targetUserId })
-          .in('id', selectedUser.scrapedData.map((s: any) => s.id));
+          .in('id', selectedUser.scrapedData.map((s) => s.id));
       }
 
       // Delete the user
@@ -147,8 +159,8 @@ export default function ManageUsers() {
             >
               <option value="">Select a user...</option>
               {users
-                .filter((u: any) => u.id !== selectedUser.id)
-                .map((u: any) => (
+                .filter((u) => u.id !== selectedUser?.id)
+                .map((u) => (
                   <option key={u.id} value={u.id}>{u.email}</option>
                 ))}
             </select>

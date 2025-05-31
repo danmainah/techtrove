@@ -133,3 +133,20 @@ create table page_visits (
   user_agent text,
   visited_at timestamp with time zone default now()
 );
+
+-- Create gadget views table
+CREATE TYPE view_type AS ENUM('product', 'category', 'home');
+
+create table gadget_views (
+  id uuid primary key default uuid_generate_v4(),
+  gadget_id uuid references gadgets(id) on delete cascade,
+  view_type view_type not null,
+  viewed_at timestamp with time zone default now(),
+  user_ip text,
+  user_agent text,
+  count integer default 1
+);
+
+-- Create index for faster analytics queries
+create index idx_gadget_views_gadget_id on gadget_views (gadget_id);
+create index idx_gadget_views_viewed_at on gadget_views (viewed_at);

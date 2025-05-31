@@ -2,56 +2,9 @@
 
 import { useEffect, useState } from 'react';    
 import { useSession } from 'next-auth/react';
+import Image from 'next/image';
 import { fetchScrapedData, approveScrapedData, deleteScrapedData } from '../_actions';
-
-type Gadget = {
-  id: string;
-  created_at: string;
-  title: string;
-  category: string;
-  image_urls: string[];
-  status: 'pending' | 'approved';
-  source_url: string;
-  short_review?: string;
-  buy_link_1?: string;
-  buy_link_2?: string;
-  // Specification fields (from schema.sql)
-  network_technology?: string;
-  launch_announced?: string;
-  launch_status?: string;
-  body_dimensions?: string;
-  body_weight?: string;
-  body_build?: string;
-  body_sim?: string;
-  display_type?: string;
-  display_size?: string;
-  display_resolution?: string;
-  display_protection?: string;
-  platform_os?: string;
-  platform_chipset?: string;
-  platform_cpu?: string;
-  platform_gpu?: string;
-  memory_internal?: string;
-  main_camera?: string;
-  main_camera_features?: string;
-  main_camera_video?: string;
-  selfie_camera?: string;
-  selfie_camera_video?: string;
-  sound_loudspeaker?: string;
-  sound_3_5mm_jack?: string;
-  comms_wlan?: string;
-  comms_bluetooth?: string;
-  comms_positioning?: string;
-  comms_nfc?: string;
-  comms_radio?: string;
-  comms_usb?: string;
-  features_sensors?: string;
-  battery_type?: string;
-  battery_charging?: string;
-  misc_colors?: string;
-  misc_models?: string;
-  misc_price?: string;
-};
+import { Gadget } from '@/types';
 
 export default function ReviewScrapped() {
   const { data: session } = useSession();
@@ -113,9 +66,13 @@ export default function ReviewScrapped() {
   // All updates are handled by the updateField function
 
   const updateField = (id: string, field: keyof Gadget, value: string) => {
-    setEditableGadgets(editableGadgets.map(g =>
-      g.id === id ? { ...g, [field]: value } : g
-    ));
+    setEditableGadgets(editableGadgets.map(g => {
+      if (g.id === id) {
+        // Create a new object with the updated field
+        return { ...g, [field]: value };
+      }
+      return g;
+    }));
   };
 
   if (loading) return <div>Loading gadgets...</div>;
@@ -127,12 +84,14 @@ export default function ReviewScrapped() {
       {editableGadgets.filter(g => g.status === 'pending').map(gadget => (
         <div key={gadget.id} className="border p-4 rounded-lg">
           <div className="flex gap-4 mb-4">
-            {gadget.image_urls.map((url, i) => (
-              <img 
+            {gadget.image_urls?.map((url, i) => (
+              <Image 
                 key={i}
                 src={url} 
-                alt={gadget.title}
-                className="w-24 h-24 object-cover rounded"
+                alt={gadget.title || 'Gadget image'}
+                width={96}
+                height={96}
+                className="object-cover rounded"
               />
             ))}
           </div>
@@ -231,19 +190,23 @@ export default function ReviewScrapped() {
               ['misc_colors', 'Colors'],
               ['misc_models', 'Models'],
               ['misc_price', 'Price'],
-            ].map(([field, label]) => (
+            ].map((item) => {
+              const field = item[0] as string;
+              const label = item[1] as string;
+              return (
               <div key={field as string} className="flex gap-2">
                 <div className="w-full">
                   <label htmlFor={`${field}-${gadget.id}`} className="block text-xs text-gray-500 mb-1">{label}</label>
                   <input
                     id={`${field}-${gadget.id}`}
-                    value={gadget[field as keyof Gadget] || ''}
+                    value={typeof gadget[field as keyof Gadget] === 'string' ? gadget[field as keyof Gadget] as string : ''}
                     onChange={e => updateField(gadget.id, field as keyof Gadget, e.target.value)}
                     className="border p-1 rounded w-full"
                   />
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
           
           <div className="mt-4 flex gap-2">

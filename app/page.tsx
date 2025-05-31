@@ -1,9 +1,11 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { fetchGadgets } from '@/app/dashboard/_actions';
+import Sidebar from './components/Sidebar';
+import Layout from './components/Layout';
 
 type Gadget = {
   id: string;
@@ -55,24 +57,27 @@ export default function Home() {
   const [latestGadgets, setLatestGadgets] = useState<Gadget[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [visibleCount, setVisibleCount] = useState(10); // Show first 10 gadgets
+  const [allGadgets, setAllGadgets] = useState<Gadget[]>([]); // Store all loaded gadgets
 
   useEffect(() => {
     console.log('Current latest gadgets:', latestGadgets);
   }, [latestGadgets]);
 
-  const loadGadgets = async () => {
+  const loadGadgets = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
       
-      const latest = await fetchGadgets();
-      console.log('Fetched latest gadgets:', latest);
+      const gadgets = await fetchGadgets();
+      console.log('Fetched gadgets:', gadgets);
       
-      if (!Array.isArray(latest)) {
+      if (!Array.isArray(gadgets)) {
         throw new Error('Invalid data format received from API');
       }
       
-      setLatestGadgets(latest.slice(0, 5));
+      setAllGadgets(gadgets);
+      setLatestGadgets(gadgets.slice(0, visibleCount));
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to load gadgets';
       console.error('Error loading gadgets:', err);
@@ -80,11 +85,17 @@ export default function Home() {
     } finally {
       setLoading(false);
     }
+  }, [visibleCount]);
+
+  const loadMore = () => {
+    const newCount = visibleCount + 10;
+    setVisibleCount(newCount);
+    setLatestGadgets(allGadgets.slice(0, newCount));
   };
 
   useEffect(() => {
     loadGadgets();
-  }, []);
+  }, [loadGadgets]);
 
   if (error) {
     return (
@@ -183,90 +194,181 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Hero Section */}
-      <div className="bg-indigo-700 text-white py-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h1 className="text-4xl font-bold tracking-tight">Welcome to Tech Trove</h1>
-          <p className="mt-4 text-xl text-indigo-100">
-            Discover the latest and greatest in tech gadgets and gear
-          </p>
-        </div>
-      </div>
-
-      {/* Latest Gadgets Summary */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <h2 className="text-2xl font-bold text-gray-900 mb-8">Latest Gadgets</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {latestGadgets.map((gadget) => {
-            const features = getSummaryFeatures(gadget);
-            return (
-              <div key={gadget.id} className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300 flex flex-col">
-                <div className="relative h-60 w-full bg-gray-100 flex items-center justify-center">
-                  {(() => {
-                    const imageData = getFirstImage(gadget);
-                    
-                    if (!imageData) {
-                      return (
-                        <div className="flex flex-col items-center justify-center p-4 text-center">
+    <Layout>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div className="flex flex-col lg:flex-row gap-8">
+          {/* Sidebar */}
+          <div className="lg:w-80 space-y-6">
+            <Sidebar />
+          </div>
+          
+          {/* Main content */}
+          <div className="flex-1">
+            {/* Hero Section */}
+            <div className="bg-indigo-700 text-white py-12 rounded-xl mb-8">
+              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <h1 className="text-4xl font-bold tracking-tight">Welcome to Tech Trove</h1>
+                <p className="mt-4 text-xl text-indigo-100">
+                  Discover the latest and greatest in tech gadgets and gear
+                </p>
+              </div>
+            </div>
+            
+            {/* Latest Gadgets Summary */}
+            <h2 className="text-3xl font-bold text-gray-900 mb-8">Latest Gadgets</h2>
+            <div className="space-y-8">
+              {latestGadgets.map((gadget) => {
+                const features = getSummaryFeatures(gadget);
+                const imageData = getFirstImage(gadget);
+                
+                return (
+                  <div key={gadget.id} className="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-xl transition-all duration-300 flex flex-col md:flex-row h-full">
+                    {/* Image Section */}
+                    <div className="relative w-full md:w-1/3 h-64 md:h-auto bg-gray-50 flex items-center justify-center p-6">
+                      {!imageData ? (
+                        <div className="flex flex-col items-center justify-center text-center p-6">
                           <svg className="w-16 h-16 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                           </svg>
                           <span className="mt-2 text-sm text-gray-500">No image available</span>
                         </div>
-                      );
-                    }
-                    
-                    return (
-                      <Image
-                        className="object-contain p-4"
-                        src={imageData.url}
-                        alt={gadget.title}
-                        fill
-                        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"
-                        onError={(e) => {
-                          // Fallback to placeholder on error
-                          const target = e.target as HTMLImageElement;
-                          target.onerror = null;
-                          target.style.display = 'none';
-                          target.parentElement!.querySelector('.no-image-fallback')?.classList.remove('hidden');
-                        }}
-                        unoptimized={imageData.isExternal}
-                      />
-                    );
-                  })()}
-                  <div className="hidden no-image-fallback absolute inset-0 flex flex-col items-center justify-center p-4 text-center">
-                    <svg className="w-16 h-16 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                    <span className="mt-2 text-sm text-gray-500">Image not available</span>
+                      ) : (
+                        <div className="relative w-full h-full">
+                          <Image
+                            className="object-contain"
+                            src={imageData.url}
+                            alt={gadget.title}
+                            fill
+                            sizes="(max-width: 768px) 100vw, 33vw"
+                            onError={(e) => {
+                              const target = e.target as HTMLImageElement;
+                              target.onerror = null;
+                              target.style.display = 'none';
+                              target.parentElement!.querySelector('.no-image-fallback')?.classList.remove('hidden');
+                            }}
+                            unoptimized={imageData.isExternal}
+                          />
+                          <div className="hidden no-image-fallback absolute inset-0 flex flex-col items-center justify-center p-4 text-center">
+                            <svg className="w-16 h-16 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Info Section */}
+                    <div className="p-6 flex-1 flex flex-col">
+                      <div className="flex justify-between items-start">
+                        <Link href={`/products/${gadget.id}`} className="hover:underline">
+                          <h3 className="text-xl font-bold text-gray-900 mb-2">
+                            {gadget.title}
+                          </h3>
+                        </Link>
+                        {features.price && (
+                          <span className="bg-indigo-100 text-indigo-800 text-sm font-semibold px-3 py-1 rounded-full">
+                            {features.price}
+                          </span>
+                        )}
+                      </div>
+                      
+                      <div className="flex-1">
+                        {/* Short Review */}
+                        {gadget.short_review && (
+                          <div className="bg-blue-50 border-l-4 border-blue-400 p-4 rounded-lg my-3">
+                            <div className="flex items-start">
+                              <div className="flex-shrink-0">
+                                <svg className="h-5 w-5 text-blue-500" fill="currentColor" viewBox="0 0 20 20">
+                                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h2a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                                </svg>
+                              </div>
+                              <div className="ml-3">
+                                <h4 className="text-sm font-medium text-blue-800">
+                                  Our Expert Review
+                                </h4>
+                                <div className="mt-1 text-sm text-gray-700">
+                                  <p className="italic">&quot;{gadget.short_review}&quot;</p>
+                                  <div className="mt-2 flex items-center">
+                                    <div className="flex items-center">
+                                      {[1, 2, 3, 4, 5].map((star) => (
+                                        <svg key={star} className="h-4 w-4 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
+                                          <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                                        </svg>
+                                      ))}
+                                      <span className="ml-1 text-xs text-gray-500">5.0</span>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                        {/* Key Specs */}
+                        <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm text-gray-700 mt-4">
+                          {features.screen && (
+                            <div className="flex items-start">
+                              <span className="font-medium text-gray-900 w-20">Display:</span>
+                              <span>{features.screen}</span>
+                            </div>
+                          )}
+                          {features.cpu && (
+                            <div className="flex items-start">
+                              <span className="font-medium text-gray-900 w-20">Processor:</span>
+                              <span>{features.cpu}</span>
+                            </div>
+                          )}
+                          {features.cameras && (
+                            <div className="flex items-start">
+                              <span className="font-medium text-gray-900 w-20">Camera:</span>
+                              <span>{features.cameras}</span>
+                            </div>
+                          )}
+                          {features.battery && (
+                            <div className="flex items-start">
+                              <span className="font-medium text-gray-900 w-20">Battery:</span>
+                              <span>{features.battery}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Action Buttons */}
+                      <div className="mt-6 flex flex-wrap gap-3">
+                        <Link 
+                          href={`/products/${gadget.id}`}
+                          className="px-5 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium"
+                        >
+                          View Full Specs
+                        </Link>
+                        {gadget.buy_link_1 && (
+                          <a 
+                            href={gadget.buy_link_1} 
+                            target="_blank" 
+                            rel="noopener noreferrer" 
+                            className="px-5 py-2.5 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-medium"
+                          >
+                            Buy Now
+                          </a>
+                        )}
+                      </div>
+                    </div>
                   </div>
+                );
+              })}
+              {allGadgets.length > visibleCount && (
+                <div className="flex justify-center mt-8">
+                  <button 
+                    onClick={loadMore}
+                    className="px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium text-lg"
+                  >
+                    Load More Gadgets
+                  </button>
                 </div>
-                <div className="p-4 flex-1 flex flex-col">
-                  <Link href={`/products/${gadget.id}`} className="hover:underline">
-                    <h3 className="text-lg font-semibold text-gray-900 line-clamp-2 mb-1">
-                      {gadget.title}
-                    </h3>
-                  </Link>
-                  <div className="text-sm text-gray-700 space-y-1 mb-2">
-                    {features.screen && <div><span className="font-medium">Screen:</span> {features.screen}</div>}
-                    {features.cpu && <div><span className="font-medium">CPU:</span> {features.cpu}</div>}
-                    {features.cameras && <div><span className="font-medium">Cameras:</span> {features.cameras}</div>}
-                    {features.battery && <div><span className="font-medium">Battery:</span> {features.battery}</div>}
-                    {features.price && <div><span className="font-medium">Price:</span> {features.price}</div>}
-                    {features.android && <div><span className="font-medium">Android:</span> {features.android}</div>}
-                  </div>
-                  {gadget.short_review && <p className="text-xs text-gray-500 mb-2 line-clamp-2">{gadget.short_review}</p>}
-                  {gadget.buy_link_1 && (
-                    <a href={gadget.buy_link_1} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline text-xs mb-2">Buy Now</a>
-                  )}
-                  <a href={`/products/${gadget.id}`} className="mt-auto inline-block px-3 py-1 bg-indigo-600 text-white rounded hover:bg-indigo-700 text-xs font-semibold">View Details</a>
-                </div>
-              </div>
-            );
-          })}
+              )}
+            </div>
+          </div>
         </div>
       </div>
-    </div>
+    </Layout>
   );
 }

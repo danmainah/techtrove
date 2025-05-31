@@ -1,69 +1,6 @@
 import { NextResponse } from 'next/server';
 import { scrapeGsmArena } from '@/app/dashboard/scrapper';
 
-type ScrapedData = {
-  network?: string;
-  launch?: {
-    announced?: string;
-    status?: string;
-  };
-  body?: {
-    dimensions?: string;
-    weight?: string;
-    build?: string;
-    sim?: string;
-  };
-  display?: {
-    type?: string;
-    size?: string;
-    resolution?: string;
-    protection?: string;
-  };
-  platform?: {
-    os?: string;
-    chipset?: string;
-    cpu?: string;
-    gpu?: string;
-  };
-  memory?: {
-    internal?: string;
-  };
-  camera?: {
-    main?: string;
-    features?: string;
-    video?: string;
-  };
-  selfie?: {
-    camera?: string;
-    video?: string;
-  };
-  sound?: {
-    loudspeaker?: string;
-    jack?: string;
-  };
-  comms?: {
-    wlan?: string;
-    bluetooth?: string;
-    positioning?: string;
-    nfc?: string;
-    radio?: string;
-    usb?: string;
-  };
-  features?: {
-    sensors?: string;
-  };
-  battery?: {
-    type?: string;
-    charging?: string;
-  };
-  misc?: {
-    colors?: string;
-    models?: string;
-    price?: string;
-  };
-  [key: string]: any;
-};
-
 export async function POST(request: Request) {
   try {
     const { url, user } = await request.json();
