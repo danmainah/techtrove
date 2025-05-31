@@ -9,6 +9,43 @@ import { GadgetWithViewCount } from '@/types';
 export default function Sidebar() {
   const [mostViewed, setMostViewed] = useState<GadgetWithViewCount[]>([]);
   const [loading, setLoading] = useState(true);
+  
+  // Helper function to get the first valid image URL
+  const getFirstImage = (gadget: GadgetWithViewCount): string | null => {
+    if (!gadget.image_url) return null;
+    
+    try {
+      // Handle both string and string[] types
+      let urls: string[] = [];
+      
+      if (Array.isArray(gadget.image_url)) {
+        urls = gadget.image_url;
+      } else if (typeof gadget.image_url === 'string') {
+        urls = gadget.image_url
+          .split(',')
+          .map((url: string) => url.trim())
+          .filter((url: string) => url.length > 0);
+      }
+      
+      const validUrl = urls.find((url: string) => url && url.trim() !== '');
+      
+      if (!validUrl) return null;
+      
+      let finalUrl = validUrl;
+      
+      // Ensure the URL has a protocol
+      if (!validUrl.startsWith('http') && !validUrl.startsWith('//')) {
+        finalUrl = `https://${validUrl}`;
+      } else if (validUrl.startsWith('//')) {
+        finalUrl = `https:${validUrl}`;
+      }
+      
+      return finalUrl;
+    } catch (error) {
+      console.error('Error processing image URL:', error);
+      return null;
+    }
+  };
 
   useEffect(() => {
     const fetchMostViewed = async () => {
@@ -46,12 +83,13 @@ export default function Sidebar() {
             className="flex items-center gap-3 hover:bg-gray-50 p-2 rounded transition-colors"
           >
             <div className="relative w-16 h-16 flex-shrink-0">
-              {gadget.image_urls?.[0] ? (
+              {getFirstImage(gadget) ? (
                 <Image 
-                  src={gadget.image_urls[0]} 
+                  src={getFirstImage(gadget) || ''} 
                   alt={gadget.title}
                   fill
                   className="object-cover rounded"
+                  unoptimized={true}
                 />
               ) : (
                 <div className="bg-gray-200 w-full h-full rounded flex items-center justify-center">
