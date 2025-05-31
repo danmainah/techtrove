@@ -4,7 +4,7 @@ import SessionProvider from "@/app/SessionProvider";
 
 
 export const metadata: Metadata = {
-  title: "Tech Trove",
+  title: "Trove Bits",
   description: "Find the best tech products and deals",
 };
 

@@ -207,7 +207,7 @@ export default function Home() {
             {/* Hero Section */}
             <div className="bg-teal-600 text-cyan-50 py-12 rounded-xl mb-8">
               <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <h1 className="text-4xl font-bold tracking-tight">Welcome to Tech Bits</h1>
+                <h1 className="text-4xl font-bold tracking-tight">Welcome to Trove Bits</h1>
                 <p className="mt-4 text-xl text-teal-100">
                   Discover the latest and greatest in tech gadgets and gear
                 </p>

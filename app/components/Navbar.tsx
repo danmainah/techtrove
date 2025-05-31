@@ -19,7 +19,7 @@ export default function Navbar() {
     <nav className="bg-teal-600 text-cyan-50 py-4 px-6 sticky top-0 z-50">
       <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
         <Link href="/" className="text-2xl font-bold hover:text-teal-200 transition-colors">
-          Tech Trove
+          Trove Bits
         </Link>
         
         <form onSubmit={handleSearch} className="flex-1 max-w-2xl mx-4">
