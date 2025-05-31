@@ -117,7 +117,7 @@ export default function Home() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-teal-500"></div>
       </div>
     );
   }
@@ -129,7 +129,7 @@ export default function Home() {
           <h2 className="text-xl font-semibold mb-2">No gadgets found</h2>
           <button 
             onClick={loadGadgets}
-            className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700"
+            className="px-4 py-2 bg-teal-600 text-white rounded hover:bg-teal-700"
           >
             Refresh
           </button>
@@ -205,10 +205,10 @@ export default function Home() {
           {/* Main content */}
           <div className="flex-1">
             {/* Hero Section */}
-            <div className="bg-indigo-700 text-white py-12 rounded-xl mb-8">
+            <div className="bg-teal-600 text-cyan-50 py-12 rounded-xl mb-8">
               <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <h1 className="text-4xl font-bold tracking-tight">Welcome to Tech Trove</h1>
-                <p className="mt-4 text-xl text-indigo-100">
+                <h1 className="text-4xl font-bold tracking-tight">Welcome to Tech Bits</h1>
+                <p className="mt-4 text-xl text-teal-100">
                   Discover the latest and greatest in tech gadgets and gear
                 </p>
               </div>
