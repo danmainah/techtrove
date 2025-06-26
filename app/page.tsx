@@ -57,7 +57,8 @@ export default function Home() {
   const [latestGadgets, setLatestGadgets] = useState<Gadget[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [visibleCount, setVisibleCount] = useState(10); // Show first 10 gadgets
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
   const [allGadgets, setAllGadgets] = useState<Gadget[]>([]); // Store all loaded gadgets
 
   useEffect(() => {
@@ -77,7 +78,7 @@ export default function Home() {
       }
       
       setAllGadgets(gadgets);
-      setLatestGadgets(gadgets.slice(0, visibleCount));
+      setLatestGadgets(gadgets.slice(0, itemsPerPage));
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to load gadgets';
       console.error('Error loading gadgets:', err);
@@ -85,12 +86,15 @@ export default function Home() {
     } finally {
       setLoading(false);
     }
-  }, [visibleCount]);
+  }, [itemsPerPage]);
 
-  const loadMore = () => {
-    const newCount = visibleCount + 10;
-    setVisibleCount(newCount);
-    setLatestGadgets(allGadgets.slice(0, newCount));
+  const totalPages = Math.ceil(allGadgets.length / itemsPerPage);
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    const startIndex = (page - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    setLatestGadgets(allGadgets.slice(startIndex, endIndex));
   };
 
   useEffect(() => {
@@ -248,7 +252,7 @@ export default function Home() {
                             }}
                             unoptimized={imageData.isExternal}
                           />
-                          <div className="hidden no-image-fallback absolute inset-0 flex flex-col items-center justify-center p-4 text-center">
+                          <div className="hidden no-image-fallback absolute inset-0 flex-col items-center justify-center p-4 text-center">
                             <svg className="w-16 h-16 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                             </svg>
@@ -355,16 +359,11 @@ export default function Home() {
                   </div>
                 );
               })}
-              {allGadgets.length > visibleCount && (
-                <div className="flex justify-center mt-8">
-                  <button 
-                    onClick={loadMore}
-                    className="px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium text-lg"
-                  >
-                    Load More Gadgets
-                  </button>
-                </div>
-              )}
+              <div className="flex justify-center mt-8">
+                {Array.from({ length: totalPages }, (_, index) => (
+                  <button key={index} onClick={() => handlePageChange(index + 1)} className={`px-4 py-2 ${currentPage === index + 1 ? 'bg-indigo-600 text-white' : 'bg-gray-200'} rounded`}>{index + 1}</button>
+                ))}
+              </div>
             </div>
           </div>
         </div>
